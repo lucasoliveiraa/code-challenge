@@ -4,10 +4,17 @@
   "main": "index.js",
   "scripts": {
     "start": "node ./src/index.js",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
+    "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/unit --runInBand",
+    "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/e2e --runInBand",
+    "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --coverage",
+    "test:coverage:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/e2e --runInBand --coverage",
+    "test:coverage:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/unit --runInBand --coverage",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "quality": "npm run lint && npm run format:check && npm test"
   },
   "author": "",
   "license": "ISC",
@@ -16,6 +23,7 @@
     "@eslint/js": "^8.57.1",
     "eslint": "^8.57.1",
     "eslint-plugin-jsdoc": "^48.11.0",
+    "jest": "^30.0.5",
     "prettier": "^3.6.2"
   }
 }
