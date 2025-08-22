@@ -37,6 +37,22 @@ Este repositório implementa o desafio de **cálculo de imposto sobre ganho de c
 - **Docker** e **Docker Compose** instalados
 - **Nenhuma instalação de Node.js necessária!**
 
+#### **Utilizando Docker**
+Para rodar o projeto com docker, é necessário ter ele instalado na sua máquina, caso não tenha, siga as instruções dos links:
+- **Ubuntu:** [Install Docker Engine on Ubuntu](https://docs.docker.com/engine/install/ubuntu/)
+- **Mac:** [Install Docker Engine on Mac](https://docs.docker.com/desktop/install/mac-install/)
+- **Windows:** [Install Docker Engine on Windows](https://docs.docker.com/desktop/install/windows-install/)
+
+Comece buildando e subindo seu container:
+```
+docker compose up -d --build
+```
+
+Se a sua versão do docker-compose for mais antiga, use:
+```
+docker-compose up -d --build
+```
+
 ### Instalação
 
 #### Opção 1: Com Node.js Local
