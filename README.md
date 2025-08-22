@@ -26,6 +26,91 @@ Este repositório implementa o desafio de **cálculo de imposto sobre ganho de c
 
 ---
 
+## ▶️ Como Rodar
+
+### Pré-requisitos
+
+#### Para execução local:
+- **Node.js 18+** (funciona também em 20/22)
+
+#### Para execução com Docker:
+- **Docker** e **Docker Compose** instalados
+- **Nenhuma instalação de Node.js necessária!**
+
+### Instalação
+
+#### Opção 1: Com Node.js Local
+```bash
+npm i
+```
+
+#### Opção 2: Com Docker (Sem instalação do Node.js)
+Apenas certifique-se de ter Docker instalado. **Nenhuma instalação de Node.js necessária!**
+
+### Execução (CLI)
+
+#### Com Node.js Local
+Rode a aplicação e forneça uma linha com uma **lista JSON** de operações (`buy`/`sell`):
+
+```bash
+npm start
+# cole uma linha JSON e tecle Enter
+# tecle Enter novamente numa linha vazia para encerrar
+```
+
+#### Com Docker
+**Modo Interativo**:
+```bash
+docker-compose run --rm capital-gains
+# cole uma linha JSON e tecle Enter
+# tecle Enter novamente numa linha vazia para encerrar
+```
+
+**Ou construa e execute diretamente**:
+```bash
+docker build -t capital-gains .
+docker run -it --rm capital-gains
+```
+
+#### Exemplos rápidos
+
+##### Com Node.js Local:
+- **Com pipe** (campos oficiais `unit-cost`):
+```bash
+echo '[{"operation":"buy","unit-cost":10.00,"quantity":100},{"operation":"sell","unit-cost":12.00,"quantity":50}]' | npm start
+```
+- **Aceita também `unitCost`**:
+```bash
+echo '[{"operation":"buy","unitCost":10,"quantity":100},{"operation":"sell","unitCost":12,"quantity":50}]' | npm start
+```
+- **Lendo de arquivo**:
+```bash
+npm start < input.txt
+```
+
+##### Com Docker:
+- **Com pipe**:
+```bash
+echo '[{"operation":"buy","unit-cost":10.00,"quantity":100},{"operation":"sell","unit-cost":12.00,"quantity":50}]' | docker-compose run --rm capital-gains
+```
+- **Lendo de arquivo**:
+```bash
+docker-compose run --rm capital-gains < input.txt
+```
+
+> **Nota**: Onde `input.txt` contém uma ou mais linhas, cada uma com uma lista JSON de operações.
+
+#### Várias simulações na mesma linha
+- **Arrays colados** (funciona em ambas as versões):
+```bash
+echo '[{"operation":"buy","unit-cost":10,"quantity":100}][{"operation":"sell","unit-cost":15,"quantity":100}]' | npm start
+# ou com Docker:
+echo '[{"operation":"buy","unit-cost":10,"quantity":100}][{"operation":"sell","unit-cost":15,"quantity":100}]' | docker-compose run --rm capital-gains
+# o programa emitirá DUAS linhas de saída (uma por lista)
+```
+
+---
+
 ## ✅ Regras & Critérios de Aceite
 
 1. **Entrada/saída**
@@ -50,3 +135,148 @@ Este repositório implementa o desafio de **cálculo de imposto sobre ganho de c
 > **Aceite**: O desafio é considerado pronto quando os **casos de teste E2E** (baseados no enunciado) passam, e os **testes unitários** de domínio cobrem as regras-chave com cobertura adequada.
 
 ---
+
+## 🧪 Testes
+
+### Com Node.js Local
+
+#### Rodar todos os testes (unit + e2e)
+```bash
+npm test
+```
+
+#### Apenas unitários
+```bash
+npm run test:unit
+```
+
+#### Apenas E2E (simulando o CLI)
+```bash
+npm run test:e2e
+```
+
+#### Coverage
+```bash
+npm run test:cov
+# relatório em texto + lcov (para CI/Codecov)
+```
+
+### Com Docker
+
+#### Rodar todos os testes
+```bash
+docker-compose --profile test run --rm capital-gains-test
+```
+
+#### Ou construa e execute diretamente
+```bash
+docker build -f Dockerfile.test -t capital-gains-test .
+docker run --rm capital-gains-test npm test
+```
+
+#### Para coverage com Docker
+```bash
+docker run --rm capital-gains-test npm run test:cov
+```
+
+Os testes E2E comparam a saída do CLI contra os valores esperados dos **casos do enunciado** (inclui cenários com isenção, compensação de prejuízo, atualização de média, etc.).
+
+---
+
+## 🏗️ Arquitetura & Estrutura
+
+A solução segue um **Monólito Modular** com **Arquitetura Hexagonal (Ports & Adapters)**:
+
+- **domain/** (puro): regras de negócio e cálculos, sem dependências de infra
+  - `money.js` — helpers monetários (centavos/inteiros, arredondamento, média ponderada)
+  - `portfolio/PortfolioState.js` — estado (quantidade, preço médio, prejuízo)
+  - `tax/TaxCalculator.js` — orquestra a política de imposto
+  - `tax/policies/BrazilEquities20pct.js` — regra atual (isenção ≤ 20k, 20%, consumo de prejuízo)
+  - `operations.js` — parser/validação de operações de entrada
+- **application/**: caso de uso que orquestra domínio e portas
+  - `process-line.usecase.js` — lê linhas, processa listas, escreve saída
+- **ports/**: contratos para entrada/saída/log (`LineReaderPort`, `LineWriterPort`, `LoggerPort`)
+- **adapters/**: implementações concretas de portas
+  - `adapters/cli/StdinLineReader.js` — leitura via `readline`
+  - `adapters/cli/StdoutLineWriter.js` — escrita `JSON.stringify`
+  - `adapters/logging/ConsoleLogger.js` — logging básico
+- **index/app**: bootstrap/wire-up
+
+### Regras de dependência
+- `domain` **não** depende de `application`/`adapters`.
+- `application` depende de `domain` e dos contratos em `ports`.
+- `adapters` implementam `ports` e são injetados no `app.js`.
+
+### Por que é bom para escalar/manter
+- Trocar CLI por **HTTP/filas**: adiciona-se novos adapters, **sem** tocar no domínio.
+- Mudar a regra fiscal (outro país, taxa, limites): nova **Policy** plugável.
+- Fácil de testar: domínio puro com unit, camada de aplicação com dublês, E2E via CLI.
+
+### Decisões-chave
+- **Centavos/inteiros** para precisão financeira.
+- **Arredondamento** somente onde necessário (média, imposto).
+- **Sem** dependência externa em runtime; apenas **Jest** em dev/test.
+
+---
+
+## 📁 Estrutura de Pastas (resumo)
+
+```
+capital-gains/
+├─ package.json
+├─ jest.config.js
+├─ src/
+│  ├─ index.js
+│  ├─ app.js
+│  ├─ application/
+│  │  └─ process-line.usecase.js
+│  ├─ domain/
+│  │  ├─ money.js
+│  │  ├─ operations.js
+│  │  ├─ portfolio/
+│  │  │  └─ PortfolioState.js
+│  │  └─ tax/
+│  │     ├─ TaxCalculator.js
+│  │     └─ policies/
+│  │        └─ BrazilEquities20pct.js
+│  ├─ ports/
+│  │  ├─ LineReaderPort.js
+│  │  ├─ LineWriterPort.js
+│  │  └─ LoggerPort.js
+│  └─ adapters/
+│     ├─ cli/
+│     │  ├─ StdinLineReader.js
+│     │  └─ StdoutLineWriter.js
+│     └─ logging/
+│        └─ ConsoleLogger.js
+└─ tests/
+   ├─ unit/
+   │  ├─ money.test.js
+   │  ├─ policy.test.js
+   │  └─ portfolio.test.js
+   └─ e2e/
+      └─ cli.e2e.test.js
+```
+
+---
+
+## 🔧 Scripts
+```json
+{
+  "start": "node ./src/index.js",
+  "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
+  "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/unit --runInBand",
+  "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/e2e --runInBand",
+  "test:cov": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --coverage"
+}
+```
+
+---
+
+## ℹ️ Observações & Limitações
+- O parser aceita **`unit-cost`** (oficial) e **`unitCost`** (qualidade de vida). Se desejar, pode-se ativar um **modo estrito** aceitando **apenas** `unit-cost`.
+- A aplicação também lida com **múltiplos arrays colados** na mesma linha (ex.: `][`). Isso não é obrigatório, mas melhora a robustez do CLI.
+- O enunciado assume entradas válidas quanto a não vender acima do estoque; o domínio tem uma checagem defensiva para esse caso.
+
+---
+
