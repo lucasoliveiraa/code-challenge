@@ -1,0 +1,30 @@
+services:
+  code-challenge:
+    build: .
+    container_name: code-challenge-app
+    stdin_open: true    # Enable interactive stdin
+    tty: true          # Allocate a pseudo-TTY
+    volumes:
+      # Mount current directory for easy file input
+      - .:/workspace
+    working_dir: /workspace
+    environment:
+      - NODE_ENV=production
+    # Override default command to keep container running
+    command: node src/index.js
+
+  # Service for running tests
+  code-challenge-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: code-challenge-test
+    volumes:
+      - .:/app
+      # Keep the node_modules from the container (don't overwrite with volume)
+      - /app/node_modules
+    working_dir: /app
+    environment:
+      - NODE_ENV=test
+    profiles:
+      - test

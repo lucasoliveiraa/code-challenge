@@ -61,15 +61,15 @@ npm start
 #### Com Docker
 **Modo Interativo**:
 ```bash
-docker-compose run --rm capital-gains
+docker-compose run --rm code-challenge
 # cole uma linha JSON e tecle Enter
 # tecle Enter novamente numa linha vazia para encerrar
 ```
 
 **Ou construa e execute diretamente**:
 ```bash
-docker build -t capital-gains .
-docker run -it --rm capital-gains
+docker build -t code-challenge .
+docker run -it --rm code-challenge
 ```
 
 #### Exemplos rápidos
@@ -91,11 +91,11 @@ npm start < input.txt
 ##### Com Docker:
 - **Com pipe**:
 ```bash
-echo '[{"operation":"buy","unit-cost":10.00,"quantity":100},{"operation":"sell","unit-cost":12.00,"quantity":50}]' | docker-compose run --rm capital-gains
+echo '[{"operation":"buy","unit-cost":10.00,"quantity":100},{"operation":"sell","unit-cost":12.00,"quantity":50}]' | docker-compose run --rm code-challenge
 ```
 - **Lendo de arquivo**:
 ```bash
-docker-compose run --rm capital-gains < input.txt
+docker-compose run --rm code-challenge < input.txt
 ```
 
 > **Nota**: Onde `input.txt` contém uma ou mais linhas, cada uma com uma lista JSON de operações.
@@ -105,7 +105,7 @@ docker-compose run --rm capital-gains < input.txt
 ```bash
 echo '[{"operation":"buy","unit-cost":10,"quantity":100}][{"operation":"sell","unit-cost":15,"quantity":100}]' | npm start
 # ou com Docker:
-echo '[{"operation":"buy","unit-cost":10,"quantity":100}][{"operation":"sell","unit-cost":15,"quantity":100}]' | docker-compose run --rm capital-gains
+echo '[{"operation":"buy","unit-cost":10,"quantity":100}][{"operation":"sell","unit-cost":15,"quantity":100}]' | docker-compose run --rm code-challenge
 # o programa emitirá DUAS linhas de saída (uma por lista)
 ```
 
@@ -157,7 +157,7 @@ npm run test:e2e
 
 #### Coverage
 ```bash
-npm run test:cov
+npm run test:coverage
 # relatório em texto + lcov (para CI/Codecov)
 ```
 
@@ -165,18 +165,18 @@ npm run test:cov
 
 #### Rodar todos os testes
 ```bash
-docker-compose --profile test run --rm capital-gains-test
+docker-compose --profile test run --rm code-challenge-test
 ```
 
 #### Ou construa e execute diretamente
 ```bash
-docker build -f Dockerfile.test -t capital-gains-test .
-docker run --rm capital-gains-test npm test
+docker build -f Dockerfile.test -t code-challenge-test .
+docker run --rm code-challenge-test npm test
 ```
 
 #### Para coverage com Docker
 ```bash
-docker run --rm capital-gains-test npm run test:cov
+docker run --rm code-challenge-test npm run test:coverage
 ```
 
 Os testes E2E comparam a saída do CLI contra os valores esperados dos **casos do enunciado** (inclui cenários com isenção, compensação de prejuízo, atualização de média, etc.).
@@ -222,7 +222,7 @@ A solução segue um **Monólito Modular** com **Arquitetura Hexagonal (Ports & 
 ## 📁 Estrutura de Pastas (resumo)
 
 ```
-capital-gains/
+code-challenge/
 ├─ package.json
 ├─ jest.config.js
 ├─ src/
@@ -265,9 +265,16 @@ capital-gains/
 {
   "start": "node ./src/index.js",
   "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
-  "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/unit --runInBand",
-  "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js tests/e2e --runInBand",
-  "test:cov": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --coverage"
+  "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js __tests__/unit --runInBand",
+  "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js __tests__/e2e --runInBand",
+  "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --coverage",
+  "test:coverage:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js __tests__/e2e --runInBand --coverage",
+  "test:coverage:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js __tests__/unit --runInBand --coverage",
+  "lint": "eslint .",
+  "lint:fix": "eslint . --fix",
+  "format": "prettier --write .",
+  "format:check": "prettier --check .",
+  "quality": "npm run lint && npm run format:check && npm test"
 }
 ```
 
