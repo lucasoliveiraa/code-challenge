@@ -1,3 +1,4 @@
+import { InsufficientStockError } from '../errors.js';
 import { totalFromUnit, weightedAverageCents } from '../money.js';
 
 export class PortfolioState {
@@ -33,7 +34,9 @@ export class PortfolioState {
       throw new Error('applySell: quantity inválida');
     }
     if (qty > this.quantity) {
-      throw new Error('Venda acima da quantidade em carteira');
+      throw new InsufficientStockError();
+      // throw new InsufficientStockError('BANANA ERROR');
+      // throw new Error('Venda acima da quantidade em carteira');
     }
 
     const sellTotalCents = totalFromUnit(unitPriceCents, qty);

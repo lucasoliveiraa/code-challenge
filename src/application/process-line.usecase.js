@@ -1,7 +1,12 @@
+import { InsufficientStockError } from '../domain/errors.js';
 import { fromCents } from '../domain/money.js';
 import { parseOperations } from '../domain/operations.js';
 import { PortfolioState } from '../domain/portfolio/portfolio-state.js';
 import { TaxCalculator } from '../domain/tax/tax-calculator.js';
+
+const ERR_CANT_SELL = 'Can\'t sell more stocks than you have';
+const ERR_BLOCKED = 'Your account is blocked';
+const ERROR_LIMIT = 3;
 
 export class ProcessLineUseCase {
   constructor({ reader, writer, logger, taxPolicy }) {
@@ -32,14 +37,36 @@ export class ProcessLineUseCase {
 
         const state = new PortfolioState();
         const output = [];
+        let invalidStreak = 0;
+        let blocked = false;
 
         for (const op of ops) {
-          if (op.kind === 'buy') {
-            state.applyBuy(op.unitCents, op.qty);
-            output.push({ tax: 0 });
-          } else {
-            const taxCents = state.applySell(op.unitCents, op.qty, taxCalc);
-            output.push({ tax: fromCents(taxCents) });
+          if (blocked) {
+            output.push({ error: ERR_BLOCKED });
+            continue;
+          }
+          try {
+            if (op.kind === 'buy') {
+              state.applyBuy(op.unitCents, op.qty);
+              output.push({ tax: 0 });
+              invalidStreak = 0;
+            } else {
+              const taxCents = state.applySell(op.unitCents, op.qty, taxCalc);
+              output.push({ tax: fromCents(taxCents) });
+              invalidStreak = 0;
+            }
+          } catch (e) {
+            if (e instanceof InsufficientStockError) {
+              // output.push({ error: e.message });
+              output.push({ error: ERR_CANT_SELL });
+              invalidStreak++;
+              if (invalidStreak >= ERROR_LIMIT) {
+                blocked = true;
+              }
+            } else {
+              this.logger.error(`Erro ao processar operação: ${e.message}`);
+              output.push({ error: 'Internal error' });
+            }
           }
         }
 

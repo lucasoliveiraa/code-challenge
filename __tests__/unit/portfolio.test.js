@@ -1,3 +1,4 @@
+import { InsufficientStockError } from '../../src/domain/errors.js';
 import { PortfolioState } from '../../src/domain/portfolio/portfolio-state.js';
 import { BrazilEquities20pct } from '../../src/domain/tax/policies/brazil-equities.js';
 import { TaxCalculator } from '../../src/domain/tax/tax-calculator.js';
@@ -98,7 +99,7 @@ describe('PortfolioState', () => {
       const taxCalc = new TaxCalculator(new BrazilEquities20pct());
       s.applyBuy(1000, 100);
       expect(() => s.applySell(1000, 150, taxCalc)).toThrow(
-        'Venda acima da quantidade em carteira'
+        InsufficientStockError
       );
     });
 
