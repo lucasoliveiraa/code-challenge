@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node ./src/index.js",
+    "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
     "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js __tests__/unit --runInBand",
     "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js __tests__/e2e --runInBand",
