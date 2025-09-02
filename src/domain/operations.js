@@ -32,7 +32,16 @@ export function parseOperations(raw) {
       throw new Error(`Operação #${i + 1}: quantity inválida`);
     }
 
-    result.push({ kind, unitCents, qty: quantity });
+    const ticker = item['ticker'];
+    if (ticker != null) {
+      if (typeof ticker !== 'string' || ticker.trim() === '') {
+        throw new Error(`Operação #${i + 1}: campo ticker inválido`);
+      }
+      result.push({ kind, unitCents, qty: quantity, ticker: ticker.trim() });
+    } else {
+      // For backward compatibility, default to 'DEFAULT' ticker
+      result.push({ kind, unitCents, qty: quantity, ticker: 'DEFAULT' });
+    }
   }
 
   return result;

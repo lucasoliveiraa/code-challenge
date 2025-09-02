@@ -125,7 +125,8 @@ describe('parseOperations', () => {
       expect(result[0]).toEqual({
         kind: 'buy',
         unitCents: 1050,
-        qty: 100
+        qty: 100,
+        ticker: 'DEFAULT'
       });
     });
 
@@ -141,7 +142,8 @@ describe('parseOperations', () => {
       expect(result[0]).toEqual({
         kind: 'sell',
         unitCents: 1575,
-        qty: 50
+        qty: 50,
+        ticker: 'DEFAULT'
       });
     });
 

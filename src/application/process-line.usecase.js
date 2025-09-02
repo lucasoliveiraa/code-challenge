@@ -1,7 +1,7 @@
 import { InsufficientStockError } from '../domain/errors.js';
 import { fromCents } from '../domain/money.js';
 import { parseOperations } from '../domain/operations.js';
-import { PortfolioState } from '../domain/portfolio/portfolio-state.js';
+import { MultiTickerPortfolioState } from '../domain/portfolio/multi-ticker-portfolio-state.js';
 import { TaxCalculator } from '../domain/tax/tax-calculator.js';
 
 const ERROR_LIMIT = 3;
@@ -34,7 +34,7 @@ export class ProcessLineUseCase {
           continue;
         }
 
-        const state = new PortfolioState();
+        const state = new MultiTickerPortfolioState();
         const output = [];
         let invalidStreak = 0;
         let blocked = false;
@@ -46,11 +46,11 @@ export class ProcessLineUseCase {
           }
           try {
             if (op.kind === 'buy') {
-              state.applyBuy(op.unitCents, op.qty);
+              state.applyBuy(op.ticker, op.unitCents, op.qty);
               output.push({ tax: 0 });
               invalidStreak = 0;
             } else {
-              const taxCents = state.applySell(op.unitCents, op.qty, taxCalc);
+              const taxCents = state.applySell(op.ticker, op.unitCents, op.qty, taxCalc);
               output.push({ tax: fromCents(taxCents) });
               invalidStreak = 0;
             }

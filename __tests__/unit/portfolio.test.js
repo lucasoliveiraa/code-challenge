@@ -98,7 +98,7 @@ describe('PortfolioState', () => {
       const taxCalc = new TaxCalculator(new BrazilEquities20pct());
       s.applyBuy(1000, 100);
       expect(() => s.applySell(1000, 150, taxCalc)).toThrow(
-        'Venda acima da quantidade em carteira'
+        'Can\'t sell more stocks than you have'
       );
     });
 
