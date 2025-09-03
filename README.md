@@ -2,12 +2,21 @@
 
 Este repositório implementa o desafio de **cálculo de imposto sobre ganho de capital** com entrada via **stdin** e saída via **stdout**, seguindo as regras e o formato descritos no enunciado.
 
+## 🚀 Novas Funcionalidades
+
+### Versão Atual
+- ✅ **Validação de Estoque**: Sistema valida automaticamente se há ações suficientes antes de permitir uma venda
+- ✅ **Bloqueio de Conta**: Após 3 erros consecutivos de estoque insuficiente, a conta é bloqueada para prevenir operações futuras
+- ✅ **Tratamento de Erros Robusto**: Classes de erro customizadas com mensagens claras e rastreabilidade
+- ✅ **Novos Testes**: Adicionados testes E2E e unitários para validação de erros e cenários de bloqueio
+- ✅ **Modo Watch para Desenvolvimento**: Execute testes em modo watch para desenvolvimento contínuo
+
 ---
 
 ## ✨ Contexto do Desafio
 
 - A aplicação lê **uma ou mais listas JSON por linha** a partir de `stdin`. Cada **lista** representa **uma simulação independente**.
-- Para cada operação na lista, deve-se imprimir **na saída padrão** uma **lista JSON** de mesmo tamanho contendo objetos `{ "tax": number }`.
+- Para cada operação na lista, deve-se imprimir **na saída padrão** uma **lista JSON** de mesmo tamanho contendo objetos `{ "tax": number }` ou `{ "error": string }` em caso de erro.
 - O programa **encerra** ao receber **uma linha vazia** (quando em modo interativo) ou no **EOF** (quando usando pipe/arquivo).
 
 ### Regras de Negócio (resumo)
@@ -18,7 +27,8 @@ Este repositório implementa o desafio de **cálculo de imposto sobre ganho de c
   - **Isenção por operação**: se o **valor total da venda** (preço × quantidade) for **≤ 20.000,00**, **não há imposto**, e **lucros** nesse caso **não consomem** o prejuízo acumulado.
   - **Operação tributável** (> 20.000,00): o **prejuízo acumulado** é **consumido** para reduzir o lucro, e o que sobrar é tributado a **20%**.
 - **Preço médio ponderado** só muda em **compras**; **vendas** não alteram a média.
-- Não há vendas acima do estoque (o enunciado assume entradas válidas dessa natureza).
+- **Validação de estoque**: Vendas acima do estoque disponível geram erro com a mensagem "Can't sell more stocks than you have".
+- **Bloqueio de conta**: Após 3 erros consecutivos de estoque insuficiente, a conta é bloqueada e operações subsequentes retornam "Your account is blocked".
 
 ### Formato numérico
 - Todos os cálculos internos são feitos em **centavos (inteiros)** para evitar erros de ponto flutuante.
@@ -133,6 +143,7 @@ echo '[{"operation":"buy","unit-cost":10,"quantity":100}][{"operation":"sell","u
    - Lê de **stdin** e imprime **apenas** listas JSON válidas em **stdout**, **uma por lista** de entrada.
    - **Uma simulação por lista**: o estado **não se carrega** entre listas de **linhas diferentes** (ou arrays colados).
    - Encerramento por **linha vazia** (interativo) ou **EOF** (pipe/arquivo).
+   - Retorna objetos de erro `{ "error": string }` para operações inválidas.
 
 2. **Cálculo de imposto**
    - **20%** sobre o **lucro tributável** de **vendas**.
@@ -140,12 +151,18 @@ echo '[{"operation":"buy","unit-cost":10,"quantity":100}][{"operation":"sell","u
    - **Prejuízo acumulado**: sempre acumula quando a venda gera prejuízo; é **consumido** somente em **operações tributáveis** (> 20k).
    - **Isenção por operação ≤ 20.000,00**: não há imposto; **lucros isentos não consomem** prejuízo; **prejuízos isentos** continuam acumulando.
 
-3. **Formatação e precisão**
+3. **Validação e tratamento de erros**
+   - **Estoque insuficiente**: Valida que não é possível vender mais ações do que se possui.
+   - **Bloqueio de conta**: Após 3 erros consecutivos de estoque insuficiente, bloqueia novas operações.
+   - **Tratamento de erros**: Sistema robusto de tratamento de erros com mensagens claras.
+
+4. **Formatação e precisão**
    - Cálculos internos em **centavos**; saída numérica compatível com JSON.
    - Arredondamento de média e imposto para **2 casas decimais**.
 
-4. **Qualidade e testes**
+5. **Qualidade e testes**
    - **Testes unitários** e **E2E** com **Jest**.
+   - **Testes de validação de erros** incluindo cenários de estoque insuficiente e bloqueio de conta.
    - Relatório de **coverage** disponível.
 
 > **Aceite**: O desafio é considerado pronto quando os **casos de teste E2E** (baseados no enunciado) passam, e os **testes unitários** de domínio cobrem as regras-chave com cobertura adequada.
@@ -169,6 +186,11 @@ npm run test:unit
 #### Apenas E2E (simulando o CLI)
 ```bash
 npm run test:e2e
+```
+
+#### Testes em modo watch (desenvolvimento)
+```bash
+npm run test:watch
 ```
 
 #### Coverage
@@ -195,7 +217,17 @@ docker run --rm code-challenge-test npm test
 docker run --rm code-challenge-test npm run test:coverage
 ```
 
-Os testes E2E comparam a saída do CLI contra os valores esperados dos **casos do enunciado** (inclui cenários com isenção, compensação de prejuízo, atualização de média, etc.).
+### Testes Disponíveis
+
+Os testes incluem:
+- **Testes E2E**: Validam o comportamento completo do CLI com casos do enunciado
+- **Testes de validação de erros**: Cenários de estoque insuficiente e bloqueio de conta
+- **Testes unitários**: Cobrem domínio, políticas fiscais, estado do portfólio e cálculos monetários
+- **Testes de integração**: Validam a interação entre componentes
+
+Novos testes adicionados:
+- `cli.errors.e2e.test.js`: Testa validação de estoque e limite de erros consecutivos
+- `insufficient.test.js`: Testes unitários para cenários de estoque insuficiente
 
 ---
 
@@ -205,12 +237,13 @@ A solução segue um **Monólito Modular** com **Arquitetura Hexagonal (Ports & 
 
 - **domain/** (puro): regras de negócio e cálculos, sem dependências de infra
   - `money.js` — helpers monetários (centavos/inteiros, arredondamento, média ponderada)
-  - `portfolio/PortfolioState.js` — estado (quantidade, preço médio, prejuízo)
+  - `portfolio/PortfolioState.js` — estado (quantidade, preço médio, prejuízo) com validação de estoque
   - `tax/TaxCalculator.js` — orquestra a política de imposto
   - `tax/policies/BrazilEquities20pct.js` — regra atual (isenção ≤ 20k, 20%, consumo de prejuízo)
   - `operations.js` — parser/validação de operações de entrada
+  - `errors.js` — classes de erro customizadas (DomainError, InsufficientStockError)
 - **application/**: caso de uso que orquestra domínio e portas
-  - `process-line.usecase.js` — lê linhas, processa listas, escreve saída
+  - `process-line.usecase.js` — lê linhas, processa listas, escreve saída, gerencia erros e bloqueio de conta
 - **ports/**: contratos para entrada/saída/log (`LineReaderPort`, `LineWriterPort`, `LoggerPort`)
 - **adapters/**: implementações concretas de portas
   - `adapters/cli/StdinLineReader.js` — leitura via `readline`
@@ -241,6 +274,9 @@ A solução segue um **Monólito Modular** com **Arquitetura Hexagonal (Ports & 
 code-challenge/
 ├─ package.json
 ├─ jest.config.js
+├─ Dockerfile
+├─ Dockerfile.test
+├─ docker-compose.yml
 ├─ src/
 │  ├─ index.js
 │  ├─ app.js
@@ -249,29 +285,32 @@ code-challenge/
 │  ├─ domain/
 │  │  ├─ money.js
 │  │  ├─ operations.js
+│  │  ├─ errors.js
 │  │  ├─ portfolio/
-│  │  │  └─ PortfolioState.js
+│  │  │  └─ portfolio-state.js
 │  │  └─ tax/
-│  │     ├─ TaxCalculator.js
+│  │     ├─ tax-calculator.js
 │  │     └─ policies/
-│  │        └─ BrazilEquities20pct.js
+│  │        └─ brazil-equities.js
 │  ├─ ports/
-│  │  ├─ LineReaderPort.js
-│  │  ├─ LineWriterPort.js
-│  │  └─ LoggerPort.js
+│  │  ├─ line-reader.js
+│  │  ├─ line-writer.js
+│  │  └─ logger.js
 │  └─ adapters/
 │     ├─ cli/
-│     │  ├─ StdinLineReader.js
-│     │  └─ StdoutLineWriter.js
+│     │  ├─ stdin-line-reader.js
+│     │  └─ stdout-line-writer.js
 │     └─ logging/
-│        └─ ConsoleLogger.js
-└─ tests/
+│        └─ console-logger.js
+└─ __tests__/
    ├─ unit/
    │  ├─ money.test.js
    │  ├─ policy.test.js
-   │  └─ portfolio.test.js
+   │  ├─ portfolio.test.js
+   │  └─ insufficient.test.js
    └─ e2e/
-      └─ cli.e2e.test.js
+      ├─ cli.e2e.test.js
+      └─ cli.errors.e2e.test.js
 ```
 
 ---
@@ -281,6 +320,7 @@ code-challenge/
 {
   "start": "node ./src/index.js",
   "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
+  "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
   "test:unit": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js __tests__/unit --runInBand",
   "test:e2e": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js __tests__/e2e --runInBand",
   "test:coverage": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand --coverage",
@@ -299,7 +339,9 @@ code-challenge/
 ## ℹ️ Observações & Limitações
 - O parser aceita **`unit-cost`** (oficial) e **`unitCost`** (qualidade de vida). Se desejar, pode-se ativar um **modo estrito** aceitando **apenas** `unit-cost`.
 - A aplicação também lida com **múltiplos arrays colados** na mesma linha (ex.: `][`). Isso não é obrigatório, mas melhora a robustez do CLI.
-- O enunciado assume entradas válidas quanto a não vender acima do estoque; o domínio tem uma checagem defensiva para esse caso.
+- **Validação de estoque**: A aplicação valida que não é possível vender mais ações do que se possui, retornando erro apropriado.
+- **Limite de erros**: Após 3 erros consecutivos de estoque insuficiente, a conta é bloqueada automaticamente.
+- **Sistema de erros robusto**: Implementação de classes de erro customizadas para melhor rastreabilidade e tratamento.
 
 ---
 
